@@ -7,8 +7,6 @@ from pylsl import StreamInfo, StreamOutlet
 
 # long UUID for standard HR characteristic 
 CHARACTERISTIC_UUID_HR = "00002a37-0000-1000-8000-00805f9b34fb"
-# polar purple
-ADDRESS = "A0:9E:1A:A8:B4:2F"
 
 # how often we expect to get new data from device (Hz)
 SAMPLINGRATE = 12
