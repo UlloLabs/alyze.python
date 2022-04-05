@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import asyncio, argparse, struct, signal
+import asyncio, argparse, struct, signal, timeit
 from bleak import BleakClient
 from pylsl import StreamInfo, StreamOutlet
 
@@ -75,6 +75,7 @@ class BBeltBleak():
             print("launch the loop")
             while True:
                 try:
+                    start_time = timeit.default_timer()
                     if not self.client.is_connected:
                         await self.connect()
                         if self.client.is_connected:
@@ -86,7 +87,12 @@ class BBeltBleak():
                     # sleep used to debug sampling rate but also to make the script work in the background, and how often we check connectivity
                     # TODO: take into account the time taken for connection?
                     await asyncio.sleep(self.loop_interval)
-                    print("Samples incoming at: %s Hz" % (self.samples_in/float(self.loop_interval)))
+                    tick = timeit.default_timer()
+                    # debug info for sampling rate
+                    sampling_rate_in=0
+                    if start_time != tick:
+                        sampling_rate_in = self.samples_in / float(tick-start_time)
+                    print("Samples incoming at: %s Hz" % sampling_rate_in)
                     self.samples_in = 0
                 except Exception as e:
                     print("Exception during belt loop")
