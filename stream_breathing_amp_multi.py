@@ -16,14 +16,15 @@ SAMPLINGRATE = 12
 class BBeltBleak():
     """
     Experimeting with bleak and asyncio. 
-    callback: function that will be called upon new samples, with a a list of samples in parameters
     FIXME: better useage of asyncio...
     """
-    def __init__(self, addr, char_id, verbose=False, callback=None):
+    def __init__(self, addr, char_id, verbose=False, callback=None, loop_interval=5):
         """
         addr: MAC adresse
         char_id: GATT characteristic ID
         verbose: debug info to stdout
+        callback: function that will be called upon new samples, with a a list of samples in parameters
+        loop_interval: how often sampling rate is shown and connectivity is checked
         """
         self.bamp = 0
         self.bIR = 0 # Note: we might not get additional infrared values
@@ -31,6 +32,7 @@ class BBeltBleak():
         self.char_id = char_id
         self.samples_in = 0
         self.callback = callback
+        self.loop_interval=loop_interval
         self.client = BleakClient(self.addr) 
 
     def launch(self):
@@ -70,27 +72,25 @@ class BBeltBleak():
                 print(e)
 
     async def _main(self):
-        await self.connect()
-        # in the background HR values are handled by the callback function
-        print("start notify")
-        try:
-            await self.client.start_notify(self.char_id, self._ble_handler)
-            print("notify started")
-
             print("launch the loop")
             while True:
-                # sleep used to debug sampling rate but also to make the script work in the background
-                await asyncio.sleep(5)
-                print("Samples incoming at: %s Hz" % (self.samples_in/5.))
-                self.samples_in = 0
-            
-        except Exception as e:
-            print(e)
-
-
-    def process(self, delay):
-        asyncio.sleep(delay)
-
+                try:
+                    if not self.client.is_connected:
+                        await self.connect()
+                        if self.client.is_connected:
+                            print("start notify")
+                            await self.client.start_notify(self.char_id, self._ble_handler)
+                            print("notify started")
+                        else:
+                            print("could not connect")
+                    # sleep used to debug sampling rate but also to make the script work in the background, and how often we check connectivity
+                    # TODO: take into account the time taken for connection?
+                    await asyncio.sleep(self.loop_interval)
+                    print("Samples incoming at: %s Hz" % (self.samples_in/float(self.loop_interval)))
+                    self.samples_in = 0
+                except Exception as e:
+                    print("Exception during belt loop")
+                    print(e)
 
     async def _terminate(self):
         await self.client.stop_notify(self.char_id)
@@ -138,6 +138,7 @@ if __name__ == "__main__":
 
     bbelt = BBeltBleak(args.mac_address, char_id, verbose = args.verbose, callback=stream)
 
+    # delegate the main loop to Bbelt
     try:
         bbelt.launch()
     except KeyboardInterrupt:
