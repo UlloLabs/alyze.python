@@ -4,10 +4,6 @@ import asyncio, argparse, struct, signal, timeit
 from bleak import BleakClient
 from pylsl import StreamInfo, StreamOutlet
 
-
-# long UUID for standard HR characteristic 
-CHARACTERISTIC_UUID_HR = "00002a37-0000-1000-8000-00805f9b34fb"
-
 # how often we expect to get new data from device (Hz)
 SAMPLINGRATE = 12
 
@@ -28,6 +24,7 @@ class BBeltBleak():
         self.bIR = 0 # Note: we might not get additional infrared values
         self.addr = addr
         self.char_id = char_id
+        self.verbose = verbose
         self.samples_in = 0
         self.callback = callback
         self.loop_interval=loop_interval
@@ -51,7 +48,7 @@ class BBeltBleak():
                 self.bIR = struct.unpack('>L', data[4:8])[0]
             self.samples_in+=1
 
-            if args.verbose :
+            if self.verbose :
                 print("Breathing Amp: " + str(self.bamp) + " raw IR: " + str(self.bIR))
 
             if self.callback is not None:
